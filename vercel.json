@@ -11,18 +11,6 @@
       "destination": "/api/itinerary.js"
     },
     {
-      "source": "/api/login",
-      "destination": "/api/login.js"
-    },
-    {
-      "source": "/api/logout",
-      "destination": "/api/logout.js"
-    },
-    {
-      "source": "/api/session",
-      "destination": "/api/session.js"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

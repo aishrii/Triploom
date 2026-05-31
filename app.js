@@ -18,15 +18,10 @@ const chatInput = document.querySelector("#chatInput");
 const chatBtn = document.querySelector("#chatBtn");
 const heroPrompt = document.querySelector("#heroPrompt");
 const heroGenerate = document.querySelector("#heroGenerate");
+const heroVoiceBtn = document.querySelector("#heroVoiceBtn");
+const chatVoiceBtn = document.querySelector("#chatVoiceBtn");
 const vibeCards = document.querySelectorAll("[data-vibe-card]");
 const navLinks = document.querySelectorAll(".nav-link");
-const authScreen = document.querySelector("#authScreen");
-const appRoot = document.querySelector("#appRoot");
-const loginForm = document.querySelector("#loginForm");
-const loginEmail = document.querySelector("#loginEmail");
-const loginPassword = document.querySelector("#loginPassword");
-const loginError = document.querySelector("#loginError");
-const signOutButton = document.querySelector("#signOutButton");
 const generateButton = document.querySelector("#generateButton");
 const generationStatus = document.querySelector("#generationStatus");
 
@@ -84,6 +79,7 @@ let currentTrip = null;
 let generatedPlan = null;
 let aiBusy = false;
 let hasGeneratedItinerary = false;
+let activeRecognition = null;
 
 const destinationHints = [
   "Bali",
@@ -134,27 +130,78 @@ function showPlannerResults() {
   plannerResults.hidden = false;
 }
 
-function setAuthenticated(isAuthenticated) {
-  authScreen.hidden = isAuthenticated;
-  appRoot.hidden = !isAuthenticated;
-  document.body.classList.toggle("auth-locked", !isAuthenticated);
-
-  if (!isAuthenticated) {
-    loginPassword.value = "";
-    loginEmail.focus();
-  }
+function getSpeechRecognition() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
-async function restoreAuth() {
-  try {
-    const response = await fetch("/api/session", {
-      credentials: "same-origin"
-    });
-    const session = await response.json();
-    setAuthenticated(Boolean(session.authenticated));
-  } catch {
-    setAuthenticated(false);
+function stopActiveRecognition() {
+  if (activeRecognition) {
+    activeRecognition.stop();
+    activeRecognition = null;
   }
+  heroVoiceBtn.classList.remove("listening");
+  chatVoiceBtn.classList.remove("listening");
+}
+
+function startVoiceInput(targetInput, triggerButton, onComplete) {
+  const SpeechRecognition = getSpeechRecognition();
+  if (!SpeechRecognition) {
+    showToast("Voice input is not supported in this browser.");
+    generationStatus.textContent = "Voice input is not supported in this browser.";
+    return;
+  }
+
+  stopActiveRecognition();
+
+  const recognition = new SpeechRecognition();
+  activeRecognition = recognition;
+  recognition.lang = "en-IN";
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  triggerButton.classList.add("listening");
+  triggerButton.setAttribute("aria-pressed", "true");
+  generationStatus.textContent = "Listening for voice input.";
+  showToast("Listening...");
+
+  let finalTranscript = "";
+
+  recognition.addEventListener("result", (event) => {
+    let interimTranscript = "";
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      const transcript = event.results[index][0].transcript;
+      if (event.results[index].isFinal) {
+        finalTranscript += transcript;
+      } else {
+        interimTranscript += transcript;
+      }
+    }
+    targetInput.value = `${finalTranscript}${interimTranscript}`.trim();
+  });
+
+  recognition.addEventListener("end", () => {
+    triggerButton.classList.remove("listening");
+    triggerButton.setAttribute("aria-pressed", "false");
+    activeRecognition = null;
+
+    if (targetInput.value.trim()) {
+      generationStatus.textContent = "Voice input captured.";
+      onComplete();
+    } else {
+      generationStatus.textContent = "No voice input captured.";
+      showToast("No voice input captured.");
+    }
+  });
+
+  recognition.addEventListener("error", () => {
+    triggerButton.classList.remove("listening");
+    triggerButton.setAttribute("aria-pressed", "false");
+    activeRecognition = null;
+    generationStatus.textContent = "Voice input failed.";
+    showToast("Voice input failed. Try typing instead.");
+  });
+
+  recognition.start();
 }
 
 function saveTripState() {
@@ -394,7 +441,6 @@ async function generateBackendPlan(trip) {
       headers: {
         "Content-Type": "application/json"
       },
-      credentials: "same-origin",
       body: JSON.stringify({ trip })
     });
 
@@ -618,6 +664,12 @@ function applyChatRequest() {
 
 chatBtn.addEventListener("click", applyChatRequest);
 heroGenerate.addEventListener("click", applyChatRequest);
+heroVoiceBtn.addEventListener("click", () => {
+  startVoiceInput(heroPrompt, heroVoiceBtn, () => applyChatRequest.call(heroGenerate));
+});
+chatVoiceBtn.addEventListener("click", () => {
+  startVoiceInput(chatInput, chatVoiceBtn, () => applyChatRequest.call(chatBtn));
+});
 chatInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") applyChatRequest();
 });
@@ -633,48 +685,19 @@ document.querySelectorAll(".quick-prompts button").forEach((button) => {
   });
 });
 
-loginForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const email = loginEmail.value.trim().toLowerCase();
-  const password = loginPassword.value;
-
-  fetch("/api/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    credentials: "same-origin",
-    body: JSON.stringify({ email, password })
-  }).then(async (response) => {
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Unable to sign in.");
-    loginError.textContent = "";
-    setAuthenticated(true);
-    showToast("Signed in to Triploom.");
-  }).catch((error) => {
-    loginError.textContent = error.message;
-    loginPassword.value = "";
-    loginPassword.focus();
-  });
-});
-
-signOutButton.addEventListener("click", () => {
-  fetch("/api/logout", {
-    method: "POST",
-    credentials: "same-origin"
-  }).finally(() => {
-    setAuthenticated(false);
-    showToast("Signed out.");
-  });
-});
-
 const navObserver = new IntersectionObserver((entries) => {
   const visible = entries
     .filter((entry) => entry.isIntersecting)
     .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
   if (!visible) return;
   navLinks.forEach((link) => {
-    link.classList.toggle("active", link.getAttribute("href") === `#${visible.target.id}`);
+    const isActive = link.getAttribute("href") === `#${visible.target.id}`;
+    link.classList.toggle("active", isActive);
+    if (isActive) {
+      link.setAttribute("aria-current", "true");
+    } else {
+      link.removeAttribute("aria-current");
+    }
   });
 }, { rootMargin: "-35% 0px -50% 0px", threshold: [0.1, 0.3, 0.6] });
 
@@ -718,4 +741,3 @@ restoreTripState();
 syncVibeControls();
 renderTrip(readTrip());
 plannerResults.hidden = !hasGeneratedItinerary;
-restoreAuth();

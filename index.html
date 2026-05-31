@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -7,34 +7,10 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <section id="authScreen" class="auth-screen" aria-label="Sign in">
-      <div class="auth-card">
-        <a class="brand auth-brand" href="#top" aria-label="Triploom home">
-          <span class="brand-icon">⊙</span>
-          <span>Triploom</span>
-        </a>
-        <h1>Sign in to start planning.</h1>
-        <p class="auth-copy">Dynamic trips crafted in real time</p>
-
-        <form id="loginForm" class="login-form">
-          <label>
-            Email
-            <input id="loginEmail" type="email" autocomplete="username" placeholder="you@example.com" required>
-          </label>
-          <label>
-            Password
-            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" required>
-          </label>
-          <p id="loginError" class="login-error" role="alert" aria-live="polite"></p>
-          <button id="loginSubmit" class="primary-action login-submit" type="submit">Submit sign in <span>→</span></button>
-        </form>
-      </div>
-    </section>
-
-    <div id="appRoot" class="app-root" hidden>
+    <a class="skip-link" href="#planner">Skip to planner</a>
     <header class="site-nav">
       <a class="brand" href="#top" aria-label="Triploom home">
-        <span class="brand-icon">⊙</span>
+        <span class="brand-icon" aria-hidden="true">◎</span>
         <span>Triploom</span>
       </a>
       <nav aria-label="Primary navigation">
@@ -43,72 +19,72 @@
         <a href="#features" class="nav-link">Features</a>
       </nav>
       <div class="nav-actions">
-        <button type="button" id="signOutButton" class="nav-ghost">Sign out</button>
-        <a class="pill-cta" href="#planner">Start Planning <span>→</span></a>
+        <a class="pill-cta" href="#planner">Start Planning <span aria-hidden="true">&rarr;</span></a>
       </div>
     </header>
 
     <main id="top">
-      <section class="hero-section">
+      <section class="hero-section" aria-labelledby="heroTitle">
         <div class="hero-content">
-          <h1>The world, <em>unfolded</em><br>for the way you travel.</h1>
+          <h1 id="heroTitle">The world, <em>unfolded</em><br>for the way you travel.</h1>
           <p class="hero-copy">
-            Triploom is an AI travel engine that turns your mood into a living, breathing itinerary — adapting to weather, budget, crowds and your pace, in real time.
+            Triploom is an AI travel engine that turns your mood into a living, breathing itinerary, adapting to weather, budget, crowds and your pace, in real time.
           </p>
 
           <div class="prompt-bar">
-            <span class="spark">✣</span>
-            <input id="heroPrompt" type="text" value="Plan me a romantic 6-day Bali trip under ₹80k with hidden cafés." aria-label="Trip prompt">
-            <button id="heroGenerate" type="button">Generate <span>→</span></button>
+            <span class="spark" aria-hidden="true">✦</span>
+            <input id="heroPrompt" type="text" value="Plan me a romantic 6-day Bali trip under ₹80k with hidden cafes." aria-label="Trip prompt">
+            <button id="heroVoiceBtn" class="voice-btn" type="button" aria-label="Use voice input for trip prompt" title="Use voice input">🎙</button>
+            <button id="heroGenerate" type="button">Generate <span aria-hidden="true">&rarr;</span></button>
           </div>
 
           <div class="quick-prompts" aria-label="Quick prompt examples">
-            <button type="button" data-prompt="Surprise me with a slow hidden gems weekend under 50k">✦ Surprise me</button>
-            <button type="button" data-prompt="Adventure under 50k for 3 days">🧳 Adventure under ₹50k</button>
-            <button type="button" data-prompt="7 days in Greece with romantic sunsets">🌊 7 days in Greece</button>
-            <button type="button" data-prompt="Tokyo food trail, rainy evenings, hidden gems">🍜 Tokyo food trail</button>
-            <button type="button" data-prompt="Iceland in winter with wonder and low crowds">🧊 Iceland in winter</button>
+            <button type="button" data-prompt="Surprise me with a slow hidden gems weekend under 50k">Surprise me</button>
+            <button type="button" data-prompt="Adventure under 50k for 3 days">Adventure under ₹50k</button>
+            <button type="button" data-prompt="7 days in Greece with romantic sunsets">7 days in Greece</button>
+            <button type="button" data-prompt="Tokyo food trail, rainy evenings, hidden gems">Tokyo food trail</button>
+            <button type="button" data-prompt="Iceland in winter with wonder and low crowds">Iceland in winter</button>
           </div>
         </div>
       </section>
 
-      <section id="vibe-engine" class="section vibe-section">
+      <section id="vibe-engine" class="section vibe-section" aria-labelledby="vibeTitle">
         <div class="split-heading">
           <div>
             <p class="kicker">The vibe engine</p>
-            <h2>Pick a feeling. We’ll<br>shape the trip around it.</h2>
+            <h2 id="vibeTitle">Pick a feeling. We'll<br>shape the trip around it.</h2>
           </div>
           <p>
-            From neon nights to silent forests — choose your travel mood and Triploom composes destinations, stays and experiences that match.
+            From neon nights to silent forests, choose your travel mood and Triploom composes destinations, stays and experiences that match.
           </p>
         </div>
 
         <div class="vibe-gallery">
           <article class="vibe-card adventure" data-vibe-card="adventure" data-destination="Rishikesh" tabindex="0">
-            <div><h3>Adventure</h3><p>Trek · Wild · Raw</p></div>
+            <div><h3>Adventure</h3><p>Trek &middot; Wild &middot; Raw</p></div>
           </article>
           <article class="vibe-card romantic" data-vibe-card="romantic" data-destination="Bali" tabindex="0">
-            <div><h3>Romantic</h3><p>Sunset · Intimate</p></div>
+            <div><h3>Romantic</h3><p>Sunset &middot; Intimate</p></div>
           </article>
           <article class="vibe-card luxury" data-vibe-card="romantic" data-style="couple" data-destination="Santorini" tabindex="0">
-            <div><h3>Luxury</h3><p>Suites · Slow living</p></div>
+            <div><h3>Luxury</h3><p>Suites &middot; Slow living</p></div>
           </article>
           <article class="vibe-card food" data-vibe-card="food exploration" data-destination="Tokyo" tabindex="0">
-            <div><h3>Food Trails</h3><p>Markets · Hidden bars</p></div>
+            <div><h3>Food Trails</h3><p>Markets &middot; Hidden bars</p></div>
           </article>
           <article class="vibe-card gems" data-vibe-card="hidden gems" data-destination="Kyoto" tabindex="0">
-            <div><h3>Hidden Gems</h3><p>Offbeat · Local</p></div>
+            <div><h3>Hidden Gems</h3><p>Offbeat &middot; Local</p></div>
           </article>
           <article class="vibe-card wellness" data-vibe-card="relaxation" data-destination="Ubud" tabindex="0">
-            <div><h3>Wellness</h3><p>Calm · Restore</p></div>
+            <div><h3>Wellness</h3><p>Calm &middot; Restore</p></div>
           </article>
         </div>
       </section>
 
-      <section id="planner" class="section planner-section">
+      <section id="planner" class="section planner-section" aria-labelledby="plannerTitle">
         <div class="planner-copy">
           <p class="kicker">Live planner</p>
-          <h2>Generate a trip that updates as you think.</h2>
+          <h2 id="plannerTitle">Generate a trip that updates as you think.</h2>
           <p>No endless filters. Change the mood, days, budget, weather or pace and Triploom rebuilds the map, the timeline and the budget instantly.</p>
 
           <form id="tripForm" class="planner-form">
@@ -171,7 +147,7 @@
             </fieldset>
 
             <div class="planner-actions">
-              <button id="generateButton" class="primary-action" type="submit">Generate itinerary <span>→</span></button>
+              <button id="generateButton" class="primary-action" type="submit">Generate itinerary <span aria-hidden="true">&rarr;</span></button>
               <button id="escapeBtn" type="button">Escape mode</button>
               <button id="surpriseBtn" type="button">Surprise</button>
               <button id="copyBtn" type="button">Copy card</button>
@@ -181,7 +157,6 @@
 
         <div id="plannerResults" class="workspace" hidden>
           <section class="map-panel">
-            <img class="map-asset" src="assets/triploom-map.svg" alt="">
             <div class="map-pin pin-one">1</div>
             <div class="map-pin pin-two">2</div>
             <div class="map-pin pin-three">3</div>
@@ -242,11 +217,11 @@
         </div>
       </section>
 
-      <section class="section conversation-section">
+      <section class="section conversation-section" aria-labelledby="conversationTitle">
         <div class="conversation-copy">
           <p class="kicker">Conversational planner</p>
-          <h2>Plan like you’re<br>texting a <em>local friend.</em></h2>
-          <p>No filters. No endless forms. Tell Triploom what you’re craving — and watch the map, the timeline and the budget update in real time.</p>
+          <h2 id="conversationTitle">Plan like you're<br>texting a <em>local friend.</em></h2>
+          <p>No filters. No endless forms. Tell Triploom what you're craving, and watch the map, the timeline and the budget update in real time.</p>
           <ul>
             <li>Natural language trip briefs</li>
             <li>Streaming AI itinerary cards</li>
@@ -255,23 +230,24 @@
           </ul>
         </div>
         <div class="chat-window">
-          <div class="window-dots"><span></span><span></span><span></span><b>TRIPLOOM · LIVE SESSION</b></div>
+          <div class="window-dots"><span></span><span></span><span></span><b>TRIPLOOM &middot; LIVE SESSION</b></div>
           <div class="message user-message">A quiet 5 days in Kyoto, mostly walking, love jazz bars and matcha.</div>
-          <div class="message ai-message">Building a slow Kyoto loop with 3 hidden listening rooms and a tea ceremony in Gion. Weather looks crisp — perfect for the Philosopher’s Path.</div>
+          <div class="message ai-message">Building a slow Kyoto loop with 3 hidden listening rooms and a tea ceremony in Gion. Weather looks crisp, perfect for the Philosopher's Path.</div>
           <div class="mini-itinerary">
             <div class="panel-head">
               <div>
-                <p>DAY 02 · HIGASHIYAMA</p>
+                <p>DAY 02 &middot; HIGASHIYAMA</p>
                 <h3>Slow morning, jazz at dusk</h3>
               </div>
               <span>✓ Weather optimized</span>
             </div>
-            <div class="mini-row"><time>07:40</time><b>⌖</b><span>Sunrise at Kiyomizu-dera</span><em>Quiet window</em></div>
-            <div class="mini-row"><time>11:15</time><b>⌖</b><span>Tea ceremony · Camellia Flower</span><em>Local pick</em></div>
-            <div class="mini-row"><time>20:30</time><b>⌖</b><span>Le Club Jazz · Sanjō</span><em>Hidden gem</em></div>
+            <div class="mini-row"><time>07:40</time><b aria-hidden="true">⌖</b><span>Sunrise at Kiyomizu-dera</span><em>Quiet window</em></div>
+            <div class="mini-row"><time>11:15</time><b aria-hidden="true">⌖</b><span>Tea ceremony &middot; Camellia Flower</span><em>Local pick</em></div>
+            <div class="mini-row"><time>20:30</time><b aria-hidden="true">⌖</b><span>Le Club Jazz &middot; Sanjo</span><em>Hidden gem</em></div>
           </div>
           <div class="chat-compose">
             <input id="chatInput" type="text" placeholder="Ask Triploom to adjust the trip">
+            <button id="chatVoiceBtn" class="voice-btn" type="button" aria-label="Use voice input for chat" title="Use voice input">🎙</button>
             <button id="chatBtn" type="button">Send</button>
           </div>
           <div id="chatLog" class="chat-log">
@@ -280,18 +256,18 @@
         </div>
       </section>
 
-      <section id="features" class="section engine-section">
+      <section id="features" class="section engine-section" aria-labelledby="featuresTitle">
         <p class="kicker">Features</p>
-        <h2>Twenty quiet superpowers,<br>working in the background.</h2>
+        <h2 id="featuresTitle">Twenty quiet superpowers,<br>working in the background.</h2>
         <div class="engine-grid">
-          <article><span>✣</span><h3>Dynamic Itinerary Builder</h3><p>Day-by-day plans shaped by your destination, pace, budget, and mood — generated in seconds.</p></article>
-          <article><span>☁</span><h3>Adaptive Replanning</h3><p>When weather, traffic, or closures shift, your trip rearranges itself in real time.</p></article>
-          <article><span>▣</span><h3>Smart Budget Optimizer</h3><p>Live expense tracking with alternatives that protect the vibe and your wallet.</p></article>
-          <article><span>⌘</span><h3>Conversational Planner</h3><p>Just talk. “A quiet 5 days in Kyoto under ₹70k” and watch it appear.</p></article>
-          <article><span>♚</span><h3>Group Consensus AI</h3><p>Blend preferences across your travel crew into one plan everyone actually likes.</p></article>
-          <article><span>□</span><h3>Local Event Injection</h3><p>Concerts, festivals, exhibitions and pop-ups slotted right into your free windows.</p></article>
-          <article><span>✈</span><h3>Smart Transit Routing</h3><p>Flights, trains, metro and rides compared by cost, speed and how you like to move.</p></article>
-          <article><span>◎</span><h3>Travel Twin AI</h3><p>Learns your taste over every trip — recommendations get more “you” each time.</p></article>
+          <article><span aria-hidden="true">✦</span><h3>Dynamic Itinerary Builder</h3><p>Day-by-day plans shaped by your destination, pace, budget, and mood, generated in seconds.</p></article>
+          <article><span aria-hidden="true">☁</span><h3>Adaptive Replanning</h3><p>When weather, traffic, or closures shift, your trip rearranges itself in real time.</p></article>
+          <article><span aria-hidden="true">▣</span><h3>Smart Budget Optimizer</h3><p>Live expense tracking with alternatives that protect the vibe and your wallet.</p></article>
+          <article><span aria-hidden="true">⌘</span><h3>Conversational Planner</h3><p>Just talk. "A quiet 5 days in Kyoto under ₹70k" and watch it appear.</p></article>
+          <article><span aria-hidden="true">♚</span><h3>Group Consensus AI</h3><p>Blend preferences across your travel crew into one plan everyone actually likes.</p></article>
+          <article><span aria-hidden="true">□</span><h3>Local Event Injection</h3><p>Concerts, festivals, exhibitions and pop-ups slotted right into your free windows.</p></article>
+          <article><span aria-hidden="true">✈</span><h3>Smart Transit Routing</h3><p>Flights, trains, metro and rides compared by cost, speed and how you like to move.</p></article>
+          <article><span aria-hidden="true">◎</span><h3>Travel Twin AI</h3><p>Learns your taste over every trip, recommendations get more "you" each time.</p></article>
         </div>
       </section>
 
@@ -299,7 +275,7 @@
         <h2>Your next trip is <em>already<br>dreaming</em> of you.</h2>
         <p>Step into Triploom and let your wanderlust meet an AI that listens, adapts, and quietly orchestrates every moment.</p>
         <div>
-          <a class="pill-cta" href="#planner">Start Planning <span>→</span></a>
+          <a class="pill-cta" href="#planner">Start Planning <span aria-hidden="true">&rarr;</span></a>
           <a class="soft-cta" href="#features">Explore Features</a>
         </div>
       </section>
@@ -307,7 +283,6 @@
 
     <div id="toast" role="status" aria-live="polite"></div>
     <p id="generationStatus" class="sr-only" role="status" aria-live="polite"></p>
-    </div>
     <script src="app.js"></script>
   </body>
 </html>

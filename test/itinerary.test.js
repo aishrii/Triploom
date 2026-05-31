@@ -1,9 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { createSessionToken } = require("../api/_auth");
 const itineraryHandler = require("../api/itinerary");
-
-const { parsePlanJson, sanitizeTrip, extractGeminiText, buildGeminiPrompt } = itineraryHandler._test;
+const { parsePlanJson, sanitizeTrip, extractGeminiText, buildGeminiPrompt } = require("../api/itinerary-core");
 
 function createResponse() {
   return {
@@ -38,6 +36,18 @@ test("sanitizeTrip clamps unsafe user input", () => {
   assert.equal(trip.budget, 5000);
   assert.equal(trip.pace, 3);
   assert.deepEqual(trip.vibes, ["hidden gems", "food exploration", "x".repeat(40)]);
+});
+
+test("sanitizeTrip falls back for non-finite numbers", () => {
+  const trip = sanitizeTrip({
+    budget: Infinity,
+    days: Number.NaN,
+    pace: -Infinity
+  });
+
+  assert.equal(trip.budget, 5000);
+  assert.equal(trip.days, 1);
+  assert.equal(trip.pace, 2);
 });
 
 test("parsePlanJson accepts fenced model JSON", () => {
@@ -98,28 +108,13 @@ test("handler reports missing Gemini key without crashing", async () => {
 
   await itineraryHandler({
     method: "POST",
-    headers: {
-      cookie: `triploom_session=${createSessionToken("demo@triploom.ai")}`,
-      "x-real-ip": "missing-key-test"
-    },
+    headers: { "x-real-ip": "missing-key-test" },
     body: { trip: { destination: "Goa", days: 2 } }
   }, response);
 
   if (oldKey) process.env.GEMINI_API_KEY = oldKey;
   assert.equal(response.statusCode, 503);
   assert.match(response.body.error, /GEMINI_API_KEY/);
-});
-
-test("handler requires authentication before using Gemini", async () => {
-  const response = createResponse();
-  await itineraryHandler({
-    method: "POST",
-    headers: { "x-real-ip": "unauth-test" },
-    body: { trip: { destination: "Goa", days: 2 } }
-  }, response);
-
-  assert.equal(response.statusCode, 401);
-  assert.match(response.body.error, /sign in/i);
 });
 
 test("handler returns a parsed Gemini plan", async () => {
@@ -145,10 +140,7 @@ test("handler returns a parsed Gemini plan", async () => {
   const response = createResponse();
   await itineraryHandler({
     method: "POST",
-    headers: {
-      cookie: `triploom_session=${createSessionToken("demo@triploom.ai")}`,
-      "x-real-ip": "success-test"
-    },
+    headers: { "x-real-ip": "success-test" },
     body: { trip: { destination: "Kyoto", days: 1, budget: 50000 } }
   }, response);
 

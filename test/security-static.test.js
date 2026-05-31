@@ -5,12 +5,16 @@ const path = require("node:path");
 
 const root = path.join(__dirname, "..");
 
-test("frontend does not contain demo password or Gemini key controls", () => {
+test("frontend does not contain sign-in UI or Gemini key controls", () => {
   const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
   const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 
   assert.doesNotMatch(app, /Triploom@123/);
+  assert.doesNotMatch(app, /\/api\/login/);
+  assert.doesNotMatch(app, /\/api\/logout/);
   assert.doesNotMatch(app, /GEMINI_API_KEY/);
+  assert.doesNotMatch(html, /loginForm/);
+  assert.doesNotMatch(html, /Sign out/);
   assert.doesNotMatch(html, /Paste Gemini API key/i);
   assert.doesNotMatch(html, /Save key/i);
 });

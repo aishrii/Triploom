@@ -20,6 +20,13 @@ const heroGenerate = document.querySelector("#heroGenerate");
 const vibeCards = document.querySelectorAll("[data-vibe-card]");
 const experienceCards = document.querySelectorAll("[data-experience]");
 const navLinks = document.querySelectorAll(".nav-link");
+const authScreen = document.querySelector("#authScreen");
+const appRoot = document.querySelector("#appRoot");
+const loginForm = document.querySelector("#loginForm");
+const loginEmail = document.querySelector("#loginEmail");
+const loginPassword = document.querySelector("#loginPassword");
+const loginError = document.querySelector("#loginError");
+const signOutButton = document.querySelector("#signOutButton");
 
 const activityBank = {
   "hidden gems": [
@@ -72,6 +79,13 @@ const packingByWeather = {
 let selectedVibes = ["hidden gems"];
 let surpriseMode = false;
 let currentTrip = null;
+let generatedPlan = null;
+let aiBusy = false;
+
+const demoAuth = {
+  email: "demo@triploom.ai",
+  password: "Triploom@123"
+};
 
 const destinationHints = [
   "Bali",
@@ -117,9 +131,30 @@ function showToast(message) {
   window.setTimeout(() => toastEl.classList.remove("show"), 2200);
 }
 
+function setAuthenticated(isAuthenticated) {
+  authScreen.hidden = isAuthenticated;
+  appRoot.hidden = !isAuthenticated;
+  document.body.classList.toggle("auth-locked", !isAuthenticated);
+
+  if (isAuthenticated) {
+    localStorage.setItem("triploomAuth", "true");
+  } else {
+    localStorage.removeItem("triploomAuth");
+    loginPassword.value = "";
+    loginEmail.focus();
+  }
+}
+
+function restoreAuth() {
+  setAuthenticated(localStorage.getItem("triploomAuth") === "true");
+}
+
 function saveTripState() {
   const trip = readTrip();
-  localStorage.setItem("triploomState", JSON.stringify({ ...trip, surpriseMode }));
+  localStorage.setItem("triploomState", JSON.stringify({
+    ...trip,
+    surpriseMode
+  }));
 }
 
 function restoreTripState() {
@@ -305,6 +340,74 @@ function budgetState(trip, itinerary) {
   return ["On track", "Local stays and walkable clusters keep costs controlled.", total];
 }
 
+function normalizeGeneratedPlan(plan, trip) {
+  if (!plan || !Array.isArray(plan.days)) return null;
+
+  return {
+    summary: String(plan.summary || `AI-generated ${trip.destination} itinerary.`),
+    budgetTip: String(plan.budgetTip || "Gemini balanced the trip against your stated budget."),
+    weatherTip: String(plan.weatherTip || "The plan includes weather-aware alternates."),
+    recommendations: Array.isArray(plan.recommendations) ? plan.recommendations.slice(0, 5) : [],
+    packing: Array.isArray(plan.packing) ? plan.packing.slice(0, 8) : [],
+    days: plan.days.slice(0, trip.days).map((day, dayIndex) => ({
+      label: String(day.label || `Day ${dayIndex + 1}`),
+      theme: String(day.theme || `${trip.vibes[dayIndex % trip.vibes.length]} route`),
+      items: Array.isArray(day.items) ? day.items.slice(0, 4).map((item, itemIndex) => ({
+        time: String(item.time || ["09:00", "12:30", "16:30", "20:00"][itemIndex] || "10:00"),
+        title: String(item.title || "AI planned experience"),
+        detail: String(item.detail || item.reason || "Generated from your Triploom brief."),
+        vibe: String(item.vibe || trip.vibes[itemIndex % trip.vibes.length]),
+        cost: Number(item.cost) || Math.round(trip.budget / trip.days / 3),
+        crowd: String(item.crowd || "low crowd")
+      })) : []
+    })).filter((day) => day.items.length)
+  };
+}
+
+async function generateBackendPlan(trip) {
+  if (aiBusy) {
+    showToast("AI is already generating a plan.");
+    return false;
+  }
+
+  aiBusy = true;
+  generatedPlan = null;
+  form.classList.add("is-loading");
+  showToast("AI is building your itinerary...");
+
+  try {
+    const response = await fetch("/api/itinerary", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ trip })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Planner API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const plan = normalizeGeneratedPlan(data.plan, trip);
+    if (!plan) throw new Error("Gemini response was missing itinerary days.");
+
+    generatedPlan = plan;
+    renderTrip(trip);
+    showToast(data.source === "gemini" ? "Gemini itinerary generated." : "Local itinerary generated.");
+    return true;
+  } catch (error) {
+    generatedPlan = null;
+    renderTrip(trip);
+    showToast(`${error.message} Local planner is active.`);
+    return false;
+  } finally {
+    aiBusy = false;
+    form.classList.remove("is-loading");
+  }
+}
+
 function renderLiveSession(trip, itinerary, weatherStatus) {
   const firstDay = itinerary[0];
   if (!firstDay) return;
@@ -331,7 +434,8 @@ function renderLiveSession(trip, itinerary, weatherStatus) {
 }
 
 function renderTrip(trip, skipped = false) {
-  const itinerary = buildItinerary(trip, skipped);
+  const aiPlan = !skipped ? generatedPlan : null;
+  const itinerary = aiPlan ? aiPlan.days : buildItinerary(trip, skipped);
   const [budgetStatus, budgetTip, estimate] = budgetState(trip, itinerary);
   const [weatherStatus, weatherTip] = weatherAdvice[trip.weather];
   currentTrip = { ...trip, itinerary, estimate };
@@ -340,24 +444,24 @@ function renderTrip(trip, skipped = false) {
   document.querySelector("#vibeSummary").textContent = `${trip.vibes.join(", ")} with ${paceLabel(trip.pace)} pacing`;
   document.querySelector("#budgetSummary").textContent = `${money(trip.budget)} planned`;
   document.querySelector("#budgetStatus").textContent = budgetStatus;
-  document.querySelector("#budgetTip").textContent = budgetTip;
+  document.querySelector("#budgetTip").textContent = aiPlan?.budgetTip || budgetTip;
   document.querySelector("#weatherStatus").textContent = weatherStatus;
-  document.querySelector("#weatherTip").textContent = weatherTip;
+  document.querySelector("#weatherTip").textContent = aiPlan?.weatherTip || weatherTip;
   document.querySelector("#twinStatus").textContent = trip.vibes.length > 2 ? "Confident" : "Learning";
   document.querySelector("#twinTip").textContent = `Preference memory favors ${trip.vibes[0]} and ${trip.style.replace("-", " ")} planning.`;
 
   itineraryEl.innerHTML = itinerary.map((day) => `
     <article class="timeline-day">
       <div class="day-head">
-        <strong>${day.label}</strong>
-        <span>${day.theme}</span>
+        <strong>${escapeHTML(day.label)}</strong>
+        <span>${escapeHTML(day.theme)}</span>
       </div>
       ${day.items.map((item) => `
         <div class="timeline-item">
-          <time>${item.time}</time>
+          <time>${escapeHTML(item.time)}</time>
           <div>
-            <h3>${item.title}</h3>
-            <p>${item.detail} Reason: matches ${item.vibe} and ${paceLabel(trip.pace)} pacing.</p>
+            <h3>${escapeHTML(item.title)}</h3>
+            <p>${escapeHTML(item.detail)} Reason: matches ${escapeHTML(item.vibe)} and ${paceLabel(trip.pace)} pacing.</p>
           </div>
           <span class="cost-pill">${money(item.cost)}</span>
         </div>
@@ -365,21 +469,31 @@ function renderTrip(trip, skipped = false) {
     </article>
   `).join("");
 
-  const uniqueVibes = [...new Set(trip.vibes)];
-  recommendationsEl.innerHTML = uniqueVibes.map((vibe, index) => {
+  const aiRecommendations = aiPlan?.recommendations || [];
+  if (aiRecommendations.length) {
+    recommendationsEl.innerHTML = aiRecommendations.map((pick) => `
+      <article class="recommendation">
+        <strong>${escapeHTML(pick.title || "AI pick")}</strong>
+        <p>${escapeHTML(pick.reason || "Selected by Gemini for this trip.")}</p>
+      </article>
+    `).join("");
+  } else {
+    const uniqueVibes = [...new Set(trip.vibes)];
+    recommendationsEl.innerHTML = uniqueVibes.map((vibe, index) => {
     const pick = activityBank[vibe][index % activityBank[vibe].length];
     const mood = escapeHTML(trip.mood || "open exploration");
     return `
       <article class="recommendation">
-        <strong>${pick[0]}</strong>
+        <strong>${escapeHTML(pick[0])}</strong>
         <p>${pick[1]} Recommended because it fits ${vibe} and your mood: ${mood}.</p>
       </article>
     `;
-  }).join("");
+    }).join("");
+  }
 
-  const packItems = [...packingBase, ...packingByWeather[trip.weather]];
+  const packItems = aiPlan?.packing?.length ? aiPlan.packing : [...packingBase, ...packingByWeather[trip.weather]];
   packingListEl.innerHTML = packItems.map((item) => `
-    <li><input type="checkbox" aria-label="${item}"><span>${item}</span></li>
+    <li><input type="checkbox" aria-label="${escapeHTML(item)}"><span>${escapeHTML(item)}</span></li>
   `).join("");
 
   document.querySelector("#shareDestination").textContent = trip.destination;
@@ -413,11 +527,12 @@ vibesContainer.addEventListener("click", (event) => {
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  renderTrip(readTrip());
-  showToast("Itinerary generated with live planning signals.");
+  const trip = readTrip();
+  generateBackendPlan(trip);
 });
 
 document.querySelector("#replanBtn").addEventListener("click", () => {
+  generatedPlan = null;
   renderTrip(readTrip(), true);
   showToast("Skipped item replaced with a nearby fallback.");
 });
@@ -431,6 +546,7 @@ document.querySelector("#escapeBtn").addEventListener("click", () => {
   weatherInput.value = "clear";
   selectedVibes = ["relaxation", "hidden gems"];
   syncVibeControls();
+  generatedPlan = null;
   renderTrip(readTrip());
   showToast("One-click escape mode built a slower getaway.");
 });
@@ -471,6 +587,7 @@ function applyChatRequest() {
   addChatLine("You", request);
   const changed = applyTextToPlanner(request);
   addChatLine("Triploom", `Updated ${changed.join(", ")}.`);
+  generateBackendPlan(readTrip());
   if (sourceInput === chatInput) chatInput.value = "";
   if (sourceInput === heroPrompt) document.querySelector("#planner").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -492,8 +609,26 @@ document.querySelectorAll(".quick-prompts button").forEach((button) => {
   });
 });
 
-document.querySelector("#signInLink").addEventListener("click", () => {
-  showToast("Demo mode: your Triploom preferences are saved locally in this browser.");
+loginForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const email = loginEmail.value.trim().toLowerCase();
+  const password = loginPassword.value;
+
+  if (email === demoAuth.email && password === demoAuth.password) {
+    loginError.textContent = "";
+    setAuthenticated(true);
+    showToast("Signed in to Triploom.");
+    return;
+  }
+
+  loginError.textContent = "Incorrect email or password. Please try again.";
+  loginPassword.value = "";
+  loginPassword.focus();
+});
+
+signOutButton.addEventListener("click", () => {
+  setAuthenticated(false);
+  showToast("Signed out.");
 });
 
 const navObserver = new IntersectionObserver((entries) => {
@@ -518,6 +653,7 @@ vibeCards.forEach((card) => {
     if (card.dataset.style) styleInput.value = card.dataset.style;
     moodInput.value = `${card.querySelector("h3").textContent.toLowerCase()} trip with ${card.querySelector("p").textContent.toLowerCase()}`;
     syncVibeControls();
+    generatedPlan = null;
     renderTrip(readTrip());
     document.querySelector("#planner").scrollIntoView({ behavior: "smooth", block: "start" });
     showToast(`${card.querySelector("h3").textContent} vibe applied.`);
@@ -539,6 +675,7 @@ experienceCards.forEach((card) => {
     daysInput.value = card.dataset.experience === "Vík" ? "5" : daysInput.value;
     weatherInput.value = card.dataset.experience === "Vík" ? "windy" : weatherInput.value;
     syncVibeControls();
+    generatedPlan = null;
     renderTrip(readTrip());
     card.classList.add("saved");
     card.querySelector("button").textContent = "♥";
@@ -556,10 +693,14 @@ experienceCards.forEach((card) => {
 
 ["input", "change"].forEach((eventName) => {
   [destinationInput, daysInput, budgetInput, styleInput, paceInput, moodInput, weatherInput].forEach((control) => {
-    control.addEventListener(eventName, () => renderTrip(readTrip()));
+    control.addEventListener(eventName, () => {
+      generatedPlan = null;
+      renderTrip(readTrip());
+    });
   });
 });
 
 restoreTripState();
 syncVibeControls();
 renderTrip(readTrip());
+restoreAuth();

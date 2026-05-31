@@ -7,6 +7,32 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <section id="authScreen" class="auth-screen" aria-label="Sign in">
+      <div class="auth-card">
+        <a class="brand auth-brand" href="#top" aria-label="Triploom home">
+          <span class="brand-icon">⊙</span>
+          <span>Triploom</span>
+        </a>
+        <p class="kicker">Private beta</p>
+        <h1>Sign in to start planning.</h1>
+        <p class="auth-copy">Triploom keeps your planning workspace private until you authenticate.</p>
+
+        <form id="loginForm" class="login-form">
+          <label>
+            Email
+            <input id="loginEmail" type="email" autocomplete="username" placeholder="you@example.com" required>
+          </label>
+          <label>
+            Password
+            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" required>
+          </label>
+          <p id="loginError" class="login-error" role="alert" aria-live="polite"></p>
+          <button id="loginSubmit" class="primary-action login-submit" type="submit">Submit sign in <span>→</span></button>
+        </form>
+      </div>
+    </section>
+
+    <div id="appRoot" class="app-root" hidden>
     <header class="site-nav">
       <a class="brand" href="#top" aria-label="Triploom home">
         <span class="brand-icon">⊙</span>
@@ -19,7 +45,7 @@
         <a href="#engine" class="nav-link">Engine</a>
       </nav>
       <div class="nav-actions">
-        <a href="#planner" id="signInLink">Sign in</a>
+        <button type="button" id="signOutButton" class="nav-ghost">Sign out</button>
         <a class="pill-cta" href="#planner">Start Planning <span>→</span></a>
       </div>
     </header>
@@ -300,6 +326,7 @@
     </main>
 
     <div id="toast" role="status" aria-live="polite"></div>
+    </div>
     <script src="app.js"></script>
   </body>
 </html>

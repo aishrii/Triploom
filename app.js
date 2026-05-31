@@ -12,13 +12,13 @@ const recommendationsEl = document.querySelector("#recommendations");
 const packingListEl = document.querySelector("#packingList");
 const toastEl = document.querySelector("#toast");
 const workspace = document.querySelector(".workspace");
+const plannerResults = document.querySelector("#plannerResults");
 const chatLog = document.querySelector("#chatLog");
 const chatInput = document.querySelector("#chatInput");
 const chatBtn = document.querySelector("#chatBtn");
 const heroPrompt = document.querySelector("#heroPrompt");
 const heroGenerate = document.querySelector("#heroGenerate");
 const vibeCards = document.querySelectorAll("[data-vibe-card]");
-const experienceCards = document.querySelectorAll("[data-experience]");
 const navLinks = document.querySelectorAll(".nav-link");
 const authScreen = document.querySelector("#authScreen");
 const appRoot = document.querySelector("#appRoot");
@@ -27,6 +27,8 @@ const loginEmail = document.querySelector("#loginEmail");
 const loginPassword = document.querySelector("#loginPassword");
 const loginError = document.querySelector("#loginError");
 const signOutButton = document.querySelector("#signOutButton");
+const generateButton = document.querySelector("#generateButton");
+const generationStatus = document.querySelector("#generationStatus");
 
 const activityBank = {
   "hidden gems": [
@@ -81,11 +83,7 @@ let surpriseMode = false;
 let currentTrip = null;
 let generatedPlan = null;
 let aiBusy = false;
-
-const demoAuth = {
-  email: "demo@triploom.ai",
-  password: "Triploom@123"
-};
+let hasGeneratedItinerary = false;
 
 const destinationHints = [
   "Bali",
@@ -131,22 +129,32 @@ function showToast(message) {
   window.setTimeout(() => toastEl.classList.remove("show"), 2200);
 }
 
+function showPlannerResults() {
+  hasGeneratedItinerary = true;
+  plannerResults.hidden = false;
+}
+
 function setAuthenticated(isAuthenticated) {
   authScreen.hidden = isAuthenticated;
   appRoot.hidden = !isAuthenticated;
   document.body.classList.toggle("auth-locked", !isAuthenticated);
 
-  if (isAuthenticated) {
-    localStorage.setItem("triploomAuth", "true");
-  } else {
-    localStorage.removeItem("triploomAuth");
+  if (!isAuthenticated) {
     loginPassword.value = "";
     loginEmail.focus();
   }
 }
 
-function restoreAuth() {
-  setAuthenticated(localStorage.getItem("triploomAuth") === "true");
+async function restoreAuth() {
+  try {
+    const response = await fetch("/api/session", {
+      credentials: "same-origin"
+    });
+    const session = await response.json();
+    setAuthenticated(Boolean(session.authenticated));
+  } catch {
+    setAuthenticated(false);
+  }
 }
 
 function saveTripState() {
@@ -347,6 +355,8 @@ function normalizeGeneratedPlan(plan, trip) {
     summary: String(plan.summary || `AI-generated ${trip.destination} itinerary.`),
     budgetTip: String(plan.budgetTip || "Gemini balanced the trip against your stated budget."),
     weatherTip: String(plan.weatherTip || "The plan includes weather-aware alternates."),
+    safetyNote: String(plan.safetyNote || "Verify opening hours, local rules, weather, and transit before booking."),
+    assumptions: Array.isArray(plan.assumptions) ? plan.assumptions.slice(0, 4).map(String) : [],
     recommendations: Array.isArray(plan.recommendations) ? plan.recommendations.slice(0, 5) : [],
     packing: Array.isArray(plan.packing) ? plan.packing.slice(0, 8) : [],
     days: plan.days.slice(0, trip.days).map((day, dayIndex) => ({
@@ -373,6 +383,9 @@ async function generateBackendPlan(trip) {
   aiBusy = true;
   generatedPlan = null;
   form.classList.add("is-loading");
+  form.setAttribute("aria-busy", "true");
+  generateButton.disabled = true;
+  generationStatus.textContent = "Generating itinerary with AI.";
   showToast("AI is building your itinerary...");
 
   try {
@@ -381,6 +394,7 @@ async function generateBackendPlan(trip) {
       headers: {
         "Content-Type": "application/json"
       },
+      credentials: "same-origin",
       body: JSON.stringify({ trip })
     });
 
@@ -395,16 +409,20 @@ async function generateBackendPlan(trip) {
 
     generatedPlan = plan;
     renderTrip(trip);
+    generationStatus.textContent = "AI itinerary generated.";
     showToast(data.source === "gemini" ? "Gemini itinerary generated." : "Local itinerary generated.");
     return true;
   } catch (error) {
     generatedPlan = null;
     renderTrip(trip);
+    generationStatus.textContent = "AI itinerary failed. Local itinerary is active.";
     showToast(`${error.message} Local planner is active.`);
     return false;
   } finally {
     aiBusy = false;
     form.classList.remove("is-loading");
+    form.removeAttribute("aria-busy");
+    generateButton.disabled = false;
   }
 }
 
@@ -446,7 +464,9 @@ function renderTrip(trip, skipped = false) {
   document.querySelector("#budgetStatus").textContent = budgetStatus;
   document.querySelector("#budgetTip").textContent = aiPlan?.budgetTip || budgetTip;
   document.querySelector("#weatherStatus").textContent = weatherStatus;
-  document.querySelector("#weatherTip").textContent = aiPlan?.weatherTip || weatherTip;
+  document.querySelector("#weatherTip").textContent = aiPlan
+    ? `${aiPlan.weatherTip} ${aiPlan.safetyNote}`
+    : weatherTip;
   document.querySelector("#twinStatus").textContent = trip.vibes.length > 2 ? "Confident" : "Learning";
   document.querySelector("#twinTip").textContent = `Preference memory favors ${trip.vibes[0]} and ${trip.style.replace("-", " ")} planning.`;
 
@@ -528,10 +548,12 @@ vibesContainer.addEventListener("click", (event) => {
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const trip = readTrip();
+  showPlannerResults();
   generateBackendPlan(trip);
 });
 
 document.querySelector("#replanBtn").addEventListener("click", () => {
+  showPlannerResults();
   generatedPlan = null;
   renderTrip(readTrip(), true);
   showToast("Skipped item replaced with a nearby fallback.");
@@ -547,6 +569,7 @@ document.querySelector("#escapeBtn").addEventListener("click", () => {
   selectedVibes = ["relaxation", "hidden gems"];
   syncVibeControls();
   generatedPlan = null;
+  showPlannerResults();
   renderTrip(readTrip());
   showToast("One-click escape mode built a slower getaway.");
 });
@@ -587,6 +610,7 @@ function applyChatRequest() {
   addChatLine("You", request);
   const changed = applyTextToPlanner(request);
   addChatLine("Triploom", `Updated ${changed.join(", ")}.`);
+  showPlannerResults();
   generateBackendPlan(readTrip());
   if (sourceInput === chatInput) chatInput.value = "";
   if (sourceInput === heroPrompt) document.querySelector("#planner").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -614,21 +638,34 @@ loginForm.addEventListener("submit", (event) => {
   const email = loginEmail.value.trim().toLowerCase();
   const password = loginPassword.value;
 
-  if (email === demoAuth.email && password === demoAuth.password) {
+  fetch("/api/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    credentials: "same-origin",
+    body: JSON.stringify({ email, password })
+  }).then(async (response) => {
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Unable to sign in.");
     loginError.textContent = "";
     setAuthenticated(true);
     showToast("Signed in to Triploom.");
-    return;
-  }
-
-  loginError.textContent = "Incorrect email or password. Please try again.";
-  loginPassword.value = "";
-  loginPassword.focus();
+  }).catch((error) => {
+    loginError.textContent = error.message;
+    loginPassword.value = "";
+    loginPassword.focus();
+  });
 });
 
 signOutButton.addEventListener("click", () => {
-  setAuthenticated(false);
-  showToast("Signed out.");
+  fetch("/api/logout", {
+    method: "POST",
+    credentials: "same-origin"
+  }).finally(() => {
+    setAuthenticated(false);
+    showToast("Signed out.");
+  });
 });
 
 const navObserver = new IntersectionObserver((entries) => {
@@ -641,7 +678,7 @@ const navObserver = new IntersectionObserver((entries) => {
   });
 }, { rootMargin: "-35% 0px -50% 0px", threshold: [0.1, 0.3, 0.6] });
 
-["planner", "vibe-engine", "experiences", "engine"].forEach((id) => {
+["planner", "vibe-engine", "features"].forEach((id) => {
   const section = document.getElementById(id);
   if (section) navObserver.observe(section);
 });
@@ -654,6 +691,7 @@ vibeCards.forEach((card) => {
     moodInput.value = `${card.querySelector("h3").textContent.toLowerCase()} trip with ${card.querySelector("p").textContent.toLowerCase()}`;
     syncVibeControls();
     generatedPlan = null;
+    showPlannerResults();
     renderTrip(readTrip());
     document.querySelector("#planner").scrollIntoView({ behavior: "smooth", block: "start" });
     showToast(`${card.querySelector("h3").textContent} vibe applied.`);
@@ -663,30 +701,6 @@ vibeCards.forEach((card) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       applyCard();
-    }
-  });
-});
-
-experienceCards.forEach((card) => {
-  const applyExperience = () => {
-    destinationInput.value = card.dataset.experience;
-    selectedVibes = [card.dataset.vibe];
-    moodInput.value = card.dataset.mood;
-    daysInput.value = card.dataset.experience === "Vík" ? "5" : daysInput.value;
-    weatherInput.value = card.dataset.experience === "Vík" ? "windy" : weatherInput.value;
-    syncVibeControls();
-    generatedPlan = null;
-    renderTrip(readTrip());
-    card.classList.add("saved");
-    card.querySelector("button").textContent = "♥";
-    document.querySelector("#planner").scrollIntoView({ behavior: "smooth", block: "start" });
-    showToast(`${card.dataset.experience} added to your planner.`);
-  };
-  card.addEventListener("click", applyExperience);
-  card.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      applyExperience();
     }
   });
 });
@@ -703,4 +717,5 @@ experienceCards.forEach((card) => {
 restoreTripState();
 syncVibeControls();
 renderTrip(readTrip());
+plannerResults.hidden = !hasGeneratedItinerary;
 restoreAuth();

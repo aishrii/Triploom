@@ -590,6 +590,13 @@ textarea {
 
 select {
   color-scheme: dark;
+  background-color: #111a30;
+  color: var(--text);
+}
+
+select option {
+  color: #111827;
+  background: #f8fafc;
 }
 
 input:focus,

@@ -6,6 +6,6 @@
     "node": ">=18"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node local-server.js"
   }
 }

@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/itinerary",
+      "destination": "/api/itinerary.js"
+    }
+  ]
+}
